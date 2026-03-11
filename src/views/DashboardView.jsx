@@ -23,13 +23,13 @@ export default function DashboardView() {
             filtered = filtered.filter(d => d.status === filterStatus);
         }
 
-        // Filter by search query
+        // Filter by search query (Safety check for nulls via Optional Chaining)
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             filtered = filtered.filter(d =>
-                d.part.toLowerCase().includes(q) ||
-                (d.description && d.description.toLowerCase().includes(q)) ||
-                d.vehicle.toLowerCase().includes(q)
+                (d.part?.toLowerCase() || '').includes(q) ||
+                (d.description?.toLowerCase() || '').includes(q) ||
+                (d.vehicle?.toLowerCase() || '').includes(q)
             );
         }
 
@@ -102,7 +102,7 @@ export default function DashboardView() {
             </p>
 
             {/* Stats Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+            <div className="stats-grid-4" style={{ marginBottom: '2rem' }}>
                 {[
                     { label: 'Yhteensä', value: stats.total, color: '#38bdf8', icon: <Wrench size={20} /> },
                     { label: 'Kriittiset', value: stats.red, color: '#ef4444', icon: <AlertCircle size={20} /> },

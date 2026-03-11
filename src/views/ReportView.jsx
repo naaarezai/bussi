@@ -593,7 +593,7 @@ function ReportModal({ part, clickPoint, onClose }) {
 
     return (
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.85)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-            <div className="glass-panel fade-in" style={{ width: '480px', padding: '2rem', borderRadius: '1.25rem', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="glass-panel fade-in" style={{ width: '100%', maxWidth: '480px', margin: '0 1rem', padding: '1.5rem', borderRadius: '1.25rem', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
                 <button onClick={onClose} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, transition: 'color 0.2s' }}
                     onMouseEnter={e => e.target.style.color = 'white'}
                     onMouseLeave={e => e.target.style.color = '#94a3b8'}

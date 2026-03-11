@@ -69,7 +69,7 @@ export default function QRScanner() {
             backdropFilter: 'blur(8px)',
         }}>
             <div className="glass-panel fade-in" style={{
-                width: '480px', maxWidth: '95vw', padding: '2rem',
+                width: '100%', maxWidth: '480px', margin: '0 1rem', padding: '1.5rem',
                 borderRadius: '1.25rem', position: 'relative',
             }}>
                 {/* Close button */}

@@ -27,7 +27,11 @@ export default function QRScanner() {
                         const success = setActiveVehicleByQR(decodedText);
                         if (success) {
                             setScanResult(decodedText);
-                            scanner.stop().catch(() => { });
+                            try {
+                                scanner.stop().catch(() => { });
+                            } catch (e) {
+                                // Ignore synchronous stop errors
+                            }
                             setTimeout(() => setShowQRScanner(false), 1500);
                         } else {
                             setError('Tuntematon QR-koodi');
@@ -48,7 +52,11 @@ export default function QRScanner() {
 
         return () => {
             if (scannerRef.current) {
-                scannerRef.current.stop().catch(() => { });
+                try {
+                    scannerRef.current.stop().catch(() => { });
+                } catch (e) {
+                    // Ignore synchronous stop errors
+                }
             }
         };
     }, [manualMode]);

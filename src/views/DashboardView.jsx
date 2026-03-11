@@ -249,7 +249,7 @@ export default function DashboardView() {
                                     </div>
                                 ) : (
                                     /* ---- View mode ---- */
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.25rem' }}>
                                         {/* Status badge */}
                                         <div style={{
                                             background: s.bg, color: s.color, padding: '0.4rem 0.8rem',
@@ -261,7 +261,7 @@ export default function DashboardView() {
                                         </div>
 
                                         {/* Details */}
-                                        <div style={{ flex: 1 }}>
+                                        <div style={{ flex: 1, minWidth: '150px' }}>
                                             <div style={{ fontWeight: '600', fontSize: '1rem', marginBottom: '0.2rem' }}>
                                                 {defect.part}
                                             </div>
@@ -274,7 +274,7 @@ export default function DashboardView() {
                                         </div>
 
                                         {/* Actions */}
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
                                             {defect.status !== 'green' && (
                                                 <button
                                                     onClick={() => updateDefectStatus(defect.id, defect.status === 'red' ? 'yellow' : 'green')}

@@ -319,6 +319,8 @@ function DefectMarkers() {
     const colorMap = { red: '#ef4444', yellow: '#eab308', green: '#22c55e' };
 
     const getPosition = (partName) => {
+        if (!partName) return null;
+
         // Find the mesh node name for this Finnish part name
         const nodeName = Object.entries(PART_NAMES).find(
             ([, name]) => name === partName
@@ -431,7 +433,7 @@ function ReportModal({ part, clickPoint, onClose }) {
     const existingDefects = defects.filter(d => {
         if (d.vehicle !== activeVehicle.id) return false;
         
-        const nameMatch = d.part === part || d.part.includes(part) || part.includes(d.part);
+        const nameMatch = d.part === part || (d.part && d.part.includes(part)) || (d.part && part.includes(d.part));
         if (!nameMatch) return false;
 
         // If we have exact coordinates for both the existing defect and the current click,

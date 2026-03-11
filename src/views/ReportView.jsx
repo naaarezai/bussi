@@ -980,10 +980,9 @@ export default function ReportView() {
                     <spotLight position={[-10, 10, -10]} angle={0.15} penumbra={1} intensity={0.5} />
                     <pointLight position={[0, 5, 0]} intensity={0.3} />
 
-                    {/* Environment for reflections */}
-                    <Environment preset="city" />
-
                     <Suspense fallback={<LoadingSpinner />}>
+                        {/* Environment for reflections */}
+                        <Environment preset="city" />
                         <Center>
                             <RealBusModel onPartClick={(part, point) => {
                                 setActivePart(part);

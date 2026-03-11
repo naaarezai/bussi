@@ -572,7 +572,6 @@ function ReportModal({ part, clickPoint, onClose }) {
     const handleSubmit = () => {
         const finalSeverity = severity || result || 'yellow';
         addDefect({ part, status: finalSeverity, description, photo: mediaPreview, mediaType, coordinates: clickPoint });
-        addToast(`Vikailmoitus lähetetty: ${part}`, 'success');
         onClose();
     };
 

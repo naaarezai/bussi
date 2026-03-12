@@ -239,13 +239,20 @@ function DynamicBusModel({ modelFile, onPartClick }) {
         e.stopPropagation();
         const localPoint = e.object.worldToLocal(e.point.clone());
         const clickPoint = [localPoint.x, localPoint.y, localPoint.z];
-        
+
         onPartClick(getPartName(modelFile, nodeName, materialName), clickPoint);
     };
 
     // Build all meshes dynamically from the nodes object
     const meshes = Object.entries(nodes)
         .filter(([, node]) => node.isMesh)
+        .filter(([, node]) => {
+            const matName = (node.material?.name || '').toLowerCase();
+            // Nämä näkymättömät massiiviset asvalttitasot ja valokeilat rikkovat 3D-mallin keskityksen!
+            if (matName.includes('asphalt')) return false;
+            if (matName.includes('beam') || matName.includes('luz_high')) return false;
+            return true;
+        })
         .map(([name, node]) => (
             <mesh
                 key={name}
@@ -272,16 +279,15 @@ function DynamicBusModel({ modelFile, onPartClick }) {
     } else if (modelFile === '/yutang.glb') {
         containerScale = [1.2, 1.2, 1.2];
         meshesRot = [-Math.PI / 2, 0, 0];
-        // Yutang's 3D origin is at its front bumper. This pushes it backward so it rotates from the center.
-        meshesPos = [0, -4.5, 0]; 
+        meshesPos = [0, -4.5, 0]; // Shift Yutang origin from front bumper to center
     }
 
     return (
         <group ref={group} dispose={null} scale={containerScale} position={[0, -1.5, 0]} rotation={containerRot} frustumCulled={false}>
             <group rotation={meshesRot} scale={meshesScale} position={meshesPos}>
                 {meshes}
-                
-                {/* Defect Markers rendered INSIDE the mesh group so they inherit rotation, scaling, and position */}
+
+                {/* Defect Markers rendered INSIDE the mesh group so they inherit rotation and scaling */}
                 <DefectMarkers modelFile={modelFile} />
             </group>
 
@@ -482,7 +488,7 @@ function ReportModal({ part, clickPoint, onClose }) {
     // Find existing defects for this part (also filter by physical distance if both have coordinates)
     const existingDefects = defects.filter(d => {
         if (d.vehicle !== activeVehicle.id) return false;
-        
+
         const nameMatch = d.part === part || (d.part && d.part.includes(part)) || (d.part && part.includes(d.part));
         if (!nameMatch) return false;
 
@@ -1037,7 +1043,7 @@ export default function ReportView() {
                     <Suspense fallback={<LoadingSpinner />}>
                         {/* Environment for reflections */}
                         <Environment preset="city" />
-                        <Center>
+                        <Center key={modelFile}>
                             <DynamicBusModel modelFile={modelFile} onPartClick={(part, point) => {
                                 setActivePart(part);
                                 setClickPoint(point);
@@ -1061,13 +1067,13 @@ export default function ReportView() {
 
             {/* Modal overlays over the canvas */}
             {activePart && (
-                <ReportModal 
-                    part={activePart} 
+                <ReportModal
+                    part={activePart}
                     clickPoint={clickPoint}
                     onClose={() => {
                         setActivePart(null);
                         setClickPoint(null);
-                    }} 
+                    }}
                 />
             )}
         </div>

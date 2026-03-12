@@ -27,7 +27,11 @@ export default function QRScanner() {
                         const success = setActiveVehicleByQR(decodedText);
                         if (success) {
                             setScanResult(decodedText);
-                            scanner.stop().catch(() => { });
+                            try {
+                                scanner.stop().catch(() => { });
+                            } catch (e) {
+                                // Ignore synchronous stop errors
+                            }
                             setTimeout(() => setShowQRScanner(false), 1500);
                         } else {
                             setError('Tuntematon QR-koodi');
@@ -48,7 +52,11 @@ export default function QRScanner() {
 
         return () => {
             if (scannerRef.current) {
-                scannerRef.current.stop().catch(() => { });
+                try {
+                    scannerRef.current.stop().catch(() => { });
+                } catch (e) {
+                    // Ignore synchronous stop errors
+                }
             }
         };
     }, [manualMode]);
@@ -69,7 +77,7 @@ export default function QRScanner() {
             backdropFilter: 'blur(8px)',
         }}>
             <div className="glass-panel fade-in" style={{
-                width: '480px', maxWidth: '95vw', padding: '2rem',
+                width: '100%', maxWidth: '480px', margin: '0 1rem', padding: '1.5rem',
                 borderRadius: '1.25rem', position: 'relative',
             }}>
                 {/* Close button */}

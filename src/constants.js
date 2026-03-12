@@ -1,10 +1,10 @@
 export const VEHICLES = [
-    { id: 'BUS-042', model: 'Marcopolo Paradiso G7', route: '611 Rautatientori', km: '142 350 km', qrCode: 'BUSSI-042-G7' },
-    { id: 'BUS-015', model: 'Volvo 9700', route: '550 Itäkeskus', km: '98 200 km', qrCode: 'BUSSI-015-V9700' },
-    { id: 'BUS-078', model: 'Scania Citywide', route: '23 Ruskeasuo', km: '210 100 km', qrCode: 'BUSSI-078-SC' },
-    { id: 'BUS-103', model: 'Mercedes Citaro', route: '66A Arabianranta', km: '175 800 km', qrCode: 'BUSSI-103-MC' },
-    { id: 'BUS-091', model: "MAN Lion's City", route: '14 Hernesaari', km: '134 600 km', qrCode: 'BUSSI-091-MAN' },
-    { id: 'BUS-056', model: 'BYD K9', route: '560 Matinkylä', km: '56 200 km', qrCode: 'BUSSI-056-BYD' },
+    { id: 'BUS-042', model: 'Marcopolo Paradiso G7', route: '611 Rautatientori', km: '142 350 km', qrCode: 'BUSSI-042-G7', modelFile: '/bus.glb' },
+    { id: 'BUS-015', model: 'Volvo 9700', route: '550 Itäkeskus', km: '98 200 km', qrCode: 'BUSSI-015-V9700', modelFile: '/bus.glb' },
+    { id: 'BUS-078', model: 'Scania Citywide', route: '23 Ruskeasuo', km: '210 100 km', qrCode: 'BUSSI-078-SC', modelFile: '/yutang.glb' },
+    { id: 'BUS-103', model: 'Mercedes Citaro', route: '66A Arabianranta', km: '175 800 km', qrCode: 'BUSSI-103-MC', modelFile: '/bus.glb' },
+    { id: 'BUS-091', model: "MAN Lion's City", route: '14 Hernesaari', km: '134 600 km', qrCode: 'BUSSI-091-MAN', modelFile: '/bus.glb' },
+    { id: 'BUS-056', model: 'BYD K9', route: '560 Matinkylä', km: '56 200 km', qrCode: 'BUSSI-056-BYD', modelFile: '/byd.glb' },
 ];
 
 export const INITIAL_DEFECTS = [

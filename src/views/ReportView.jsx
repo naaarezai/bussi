@@ -5,8 +5,10 @@ import { Camera, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { useStore } from '../store';
 import * as THREE from 'three';
 
-// Part name mapping - maps mesh node names to human-readable Finnish names
-const PART_NAMES = {
+import { VEHICLES } from '../constants'; // Added to lookup modelFile
+
+// Part name mapping for the default bus model
+const PART_NAMES_BUS = {
     // Body / Runko
     'Cubo028_Cubo060': 'Katto',
     'Cubo020_Cubo058': 'Runko (pohja)',
@@ -141,8 +143,33 @@ const PART_NAMES = {
     'Cubo004-Mesh_1': 'Etukulma (pohja)',
 };
 
-function getPartName(nodeName) {
-    return PART_NAMES[nodeName] || nodeName;
+function getPartName(modelFile, nodeName, materialName) {
+    if (modelFile === '/bus.glb') {
+        return PART_NAMES_BUS[nodeName] || nodeName;
+    } else if (modelFile === '/byd.glb') {
+        const mat = (materialName || '').toLowerCase();
+        if (mat.includes('mirror')) return 'Sivupeilit';
+        if (mat.includes('vidro') || mat.includes('window')) return 'Ikkunat';
+        if (mat.includes('tire') || mat.includes('wheel') || mat.includes('pneu')) return 'Renkaat';
+        if (mat.includes('farol') || mat.includes('luz')) return 'Valot';
+        if (mat.includes('banco')) return 'Matkustajapenkit';
+        if (mat.includes('floor')) return 'Lattia';
+        if (mat.includes('plastic')) return 'Muoviosat';
+        if (mat.includes('metal')) return 'Metalliosat';
+        if (mat.includes('mascara')) return 'Puskuri';
+        return 'Kori (BYD)';
+    } else if (modelFile === '/yutang.glb') {
+        const mat = (materialName || '').toLowerCase();
+        if (mat.includes('glass')) return 'Ikkunat';
+        if (mat.includes('aluminum') || mat.includes('steel') || mat.includes('metal')) return 'Metalliosat';
+        if (mat.includes('fabric')) return 'Matkustajapenkit';
+        if (mat.includes('asphalt')) return 'Lattia';
+        if (mat.includes('color')) return 'Kori (Solaris)';
+        if (mat.includes('charcoal')) return 'Muoviosat';
+        if (mat.includes('aim') || mat.includes('ftv')) return 'Ulkokuori';
+        return 'Kori (Solaris)';
+    }
+    return nodeName;
 }
 
 // Loading spinner while 3D model loads
@@ -164,18 +191,18 @@ function LoadingSpinner() {
     );
 }
 
-// Real Marcopolo Bus Model — all 100 meshes
-function RealBusModel({ onPartClick }) {
+// Real Dynamic Bus Model — loads right .glb for the active vehicle
+function DynamicBusModel({ modelFile, onPartClick }) {
     const group = useRef();
-    const { nodes, materials } = useGLTF('/bus.glb');
+    const { nodes } = useGLTF(modelFile);
     const [hovered, setHovered] = useState(null);
 
     // Force computation of bounding boxes for every imported mesh
     useEffect(() => {
         Object.values(nodes).forEach(node => {
             if (node.isMesh && node.geometry) {
-                node.geometry.computeBoundingBox();
-                node.geometry.computeBoundingSphere();
+                if (!node.geometry.boundingBox) node.geometry.computeBoundingBox();
+                if (!node.geometry.boundingSphere) node.geometry.computeBoundingSphere();
             }
         });
     }, [nodes]);
@@ -187,10 +214,10 @@ function RealBusModel({ onPartClick }) {
         }
     });
 
-    const handlePointerOver = (e, nodeName) => {
+    const handlePointerOver = (e, nodeName, materialName) => {
         e.stopPropagation();
         document.body.style.cursor = 'pointer';
-        setHovered(nodeName);
+        setHovered({ nodeName, materialName });
         if (e.object.material) {
             e.object.material = e.object.material.clone();
             e.object.material.emissiveIntensity = 0.5;
@@ -208,15 +235,12 @@ function RealBusModel({ onPartClick }) {
         }
     };
 
-    const handleClick = (e, nodeName) => {
+    const handleClick = (e, nodeName, materialName) => {
         e.stopPropagation();
-        // Convert the exact global click point to the mesh's local coordinates.
-        // Since the individual meshes don't have their own transforms (they are at origin of the group),
-        // this gives us the coordinates in the bus group's local space!
         const localPoint = e.object.worldToLocal(e.point.clone());
         const clickPoint = [localPoint.x, localPoint.y, localPoint.z];
         
-        onPartClick(getPartName(nodeName), clickPoint);
+        onPartClick(getPartName(modelFile, nodeName, materialName), clickPoint);
     };
 
     // Build all meshes dynamically from the nodes object
@@ -228,20 +252,40 @@ function RealBusModel({ onPartClick }) {
                 frustumCulled={false}
                 geometry={node.geometry}
                 material={node.material}
-                onClick={(e) => handleClick(e, name)}
-                onPointerOver={(e) => handlePointerOver(e, name)}
+                onClick={(e) => handleClick(e, name, node.material?.name)}
+                onPointerOver={(e) => handlePointerOver(e, name, node.material?.name)}
                 onPointerOut={handlePointerOut}
             />
         ));
 
-    return (
-        <group ref={group} dispose={null} scale={[1.4, 1.4, 1.4]} position={[0, -1.5, 0]} rotation={[0, Math.PI / 2, 0]} frustumCulled={false}>
-            {meshes}
-            
-            {/* Defect Markers rendered INSIDE the bus group so they inherit all scale, rotation, and animations */}
-            <DefectMarkers />
+    // Determine scale and rotation per model format
+    let containerScale = [1.4, 1.4, 1.4];
+    let containerRot = [0, Math.PI / 2, 0];
+    let meshesRot = [0, 0, 0];
+    let meshesScale = [1, 1, 1];
+    let meshesPos = [0, 0, 0];
 
-            {/* Hover Tooltip */}
+    if (modelFile === '/byd.glb') {
+        containerScale = [1.0, 1.0, 1.0]; // Tweaked scale to fit camera
+        meshesRot = [-Math.PI / 2, 0, 0];
+        meshesScale = [1.3, 1.3, 1.3]; // BYD model geometry is tiny, but don't overscale
+    } else if (modelFile === '/yutang.glb') {
+        containerScale = [1.2, 1.2, 1.2];
+        meshesRot = [-Math.PI / 2, 0, 0];
+        // Yutang's 3D origin is at its front bumper. This pushes it backward so it rotates from the center.
+        meshesPos = [0, -4.5, 0]; 
+    }
+
+    return (
+        <group ref={group} dispose={null} scale={containerScale} position={[0, -1.5, 0]} rotation={containerRot} frustumCulled={false}>
+            <group rotation={meshesRot} scale={meshesScale} position={meshesPos}>
+                {meshes}
+                
+                {/* Defect Markers rendered INSIDE the mesh group so they inherit rotation, scaling, and position */}
+                <DefectMarkers modelFile={modelFile} />
+            </group>
+
+            {/* Hover Tooltip rendered at root to stay upright */}
             {hovered && (
                 <Html position={[0, 3.5, 0]} center distanceFactor={8} style={{ pointerEvents: 'none' }}>
                     <div style={{
@@ -258,7 +302,7 @@ function RealBusModel({ onPartClick }) {
                         boxShadow: '0 4px 20px rgba(56, 189, 248, 0.2)',
                         textAlign: 'center',
                     }}>
-                        <span style={{ color: '#38bdf8' }}>🔍</span> {getPartName(hovered)}
+                        <span style={{ color: '#38bdf8' }}>🔍</span> {getPartName(modelFile, hovered.nodeName, hovered.materialName)}
                     </div>
                 </Html>
             )}
@@ -267,6 +311,8 @@ function RealBusModel({ onPartClick }) {
 }
 
 useGLTF.preload('/bus.glb');
+useGLTF.preload('/byd.glb');
+useGLTF.preload('/yutang.glb');
 
 // Single pulsing defect marker sphere
 function PulsingMarker({ color, position, number }) {
@@ -313,21 +359,27 @@ function PulsingMarker({ color, position, number }) {
 }
 
 // Markers indicating existing defects — rendered INSIDE the RealBusModel group
-function DefectMarkers() {
+function DefectMarkers({ modelFile }) {
     const { defects, activeVehicle } = useStore();
-    const { nodes } = useGLTF('/bus.glb');
+    const { nodes } = useGLTF(modelFile);
     const colorMap = { red: '#ef4444', yellow: '#eab308', green: '#22c55e' };
 
     const getPosition = (partName) => {
-        // Find the mesh node name for this Finnish part name
-        const nodeName = Object.entries(PART_NAMES).find(
-            ([, name]) => name === partName
-        )?.[0];
+        if (!partName) return null;
 
-        // Try partial match if exact not found
-        const targetName = nodeName || Object.entries(PART_NAMES).find(
-            ([, name]) => partName.includes(name) || name.includes(partName)
-        )?.[0];
+        let targetName = null;
+        if (modelFile === '/bus.glb') {
+            targetName = Object.entries(PART_NAMES_BUS).find(([, name]) => name === partName)?.[0];
+            if (!targetName) {
+                targetName = Object.entries(PART_NAMES_BUS).find(([, name]) => partName.includes(name) || name.includes(partName))?.[0];
+            }
+        } else {
+            // Reverse mapping using material heuristics for new models
+            targetName = Object.entries(nodes).find(([, node]) => {
+                const matName = node.material?.name;
+                return getPartName(modelFile, node.name, matName) === partName;
+            })?.[0];
+        }
 
         if (!targetName || !nodes[targetName] || !nodes[targetName].isMesh) return null;
 
@@ -431,7 +483,7 @@ function ReportModal({ part, clickPoint, onClose }) {
     const existingDefects = defects.filter(d => {
         if (d.vehicle !== activeVehicle.id) return false;
         
-        const nameMatch = d.part === part || d.part.includes(part) || part.includes(d.part);
+        const nameMatch = d.part === part || (d.part && d.part.includes(part)) || (d.part && part.includes(d.part));
         if (!nameMatch) return false;
 
         // If we have exact coordinates for both the existing defect and the current click,
@@ -593,7 +645,7 @@ function ReportModal({ part, clickPoint, onClose }) {
 
     return (
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.85)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-            <div className="glass-panel fade-in" style={{ width: '480px', padding: '2rem', borderRadius: '1.25rem', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="glass-panel fade-in" style={{ width: '100%', maxWidth: '480px', margin: '0 1rem', padding: '1.5rem', borderRadius: '1.25rem', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
                 <button onClick={onClose} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, transition: 'color 0.2s' }}
                     onMouseEnter={e => e.target.style.color = 'white'}
                     onMouseLeave={e => e.target.style.color = '#94a3b8'}
@@ -943,8 +995,12 @@ function ReportModal({ part, clickPoint, onClose }) {
 }
 
 export default function ReportView() {
-    const { activePart, setActivePart } = useStore();
+    const { activePart, setActivePart, activeVehicle } = useStore();
     const [clickPoint, setClickPoint] = useState(null);
+
+    // Resolve the modelFile for the current vehicle from VEHICLES constant, or fallback
+    const vehicleDef = VEHICLES.find(v => v.id === activeVehicle?.id);
+    const modelFile = vehicleDef?.modelFile || '/bus.glb';
 
     return (
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -978,12 +1034,11 @@ export default function ReportView() {
                     <spotLight position={[-10, 10, -10]} angle={0.15} penumbra={1} intensity={0.5} />
                     <pointLight position={[0, 5, 0]} intensity={0.3} />
 
-                    {/* Environment for reflections */}
-                    <Environment preset="city" />
-
                     <Suspense fallback={<LoadingSpinner />}>
+                        {/* Environment for reflections */}
+                        <Environment preset="city" />
                         <Center>
-                            <RealBusModel onPartClick={(part, point) => {
+                            <DynamicBusModel modelFile={modelFile} onPartClick={(part, point) => {
                                 setActivePart(part);
                                 setClickPoint(point);
                             }} />
@@ -995,7 +1050,7 @@ export default function ReportView() {
                         enablePan={true}
                         enableZoom={true}
                         minDistance={2}
-                        maxDistance={25}
+                        maxDistance={60}
                         minPolarAngle={0}
                         maxPolarAngle={Math.PI / 2 + 0.1}
                     />

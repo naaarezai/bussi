@@ -43,7 +43,7 @@ export default function Layout() {
                         onClick={handleExport}
                         className="btn"
                         style={{
-                            position: 'absolute', top: '1.5rem', right: '5rem', zIndex: 5,
+                            position: 'absolute', top: '1.5rem', right: '1.5rem', zIndex: 5,
                             borderRadius: '0.75rem', fontSize: '0.8rem', padding: '0.5rem 1rem',
                         }}
                     >

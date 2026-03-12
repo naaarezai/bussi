@@ -319,8 +319,6 @@ function DefectMarkers() {
     const colorMap = { red: '#ef4444', yellow: '#eab308', green: '#22c55e' };
 
     const getPosition = (partName) => {
-        if (!partName) return null;
-
         // Find the mesh node name for this Finnish part name
         const nodeName = Object.entries(PART_NAMES).find(
             ([, name]) => name === partName
@@ -433,7 +431,7 @@ function ReportModal({ part, clickPoint, onClose }) {
     const existingDefects = defects.filter(d => {
         if (d.vehicle !== activeVehicle.id) return false;
         
-        const nameMatch = d.part === part || (d.part && d.part.includes(part)) || (d.part && part.includes(d.part));
+        const nameMatch = d.part === part || d.part.includes(part) || part.includes(d.part);
         if (!nameMatch) return false;
 
         // If we have exact coordinates for both the existing defect and the current click,
@@ -595,7 +593,7 @@ function ReportModal({ part, clickPoint, onClose }) {
 
     return (
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.85)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-            <div className="glass-panel fade-in" style={{ width: '100%', maxWidth: '480px', margin: '0 1rem', padding: '1.5rem', borderRadius: '1.25rem', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="glass-panel fade-in" style={{ width: '480px', padding: '2rem', borderRadius: '1.25rem', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
                 <button onClick={onClose} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, transition: 'color 0.2s' }}
                     onMouseEnter={e => e.target.style.color = 'white'}
                     onMouseLeave={e => e.target.style.color = '#94a3b8'}
@@ -980,9 +978,10 @@ export default function ReportView() {
                     <spotLight position={[-10, 10, -10]} angle={0.15} penumbra={1} intensity={0.5} />
                     <pointLight position={[0, 5, 0]} intensity={0.3} />
 
+                    {/* Environment for reflections */}
+                    <Environment preset="city" />
+
                     <Suspense fallback={<LoadingSpinner />}>
-                        {/* Environment for reflections */}
-                        <Environment preset="city" />
                         <Center>
                             <RealBusModel onPartClick={(part, point) => {
                                 setActivePart(part);

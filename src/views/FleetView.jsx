@@ -31,7 +31,7 @@ export default function FleetView() {
             </p>
 
             {/* Fleet Summary */}
-            <div className="stats-grid-3" style={{ marginBottom: '2.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2.5rem' }}>
                 {[
                     { label: 'Ajokelpoisia', value: VEHICLES.length - redDefects.length, color: '#22c55e', total: VEHICLES.length },
                     { label: 'Ajokiellossa', value: redDefects.length > 0 ? 1 : 0, color: '#ef4444' },

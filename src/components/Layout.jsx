@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import DashboardView from '../views/DashboardView';
 import ReportView from '../views/ReportView';
 import FleetView from '../views/FleetView';
+import HistoryView from '../views/HistoryView';
 import SettingsView from '../views/SettingsView';
 import QRScanner from './QRScanner';
 import ToastContainer from './ToastContainer';
@@ -16,6 +17,7 @@ export default function Layout() {
         dashboard: <DashboardView />,
         report: <ReportView />,
         fleet: <FleetView />,
+        history: <HistoryView />,
         settings: <SettingsView />,
     };
 

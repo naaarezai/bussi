@@ -4,10 +4,12 @@ import { useStore } from './store'
 
 function App() {
   const fetchDefects = useStore((state) => state.fetchDefects)
+  const subscribeToDefects = useStore((state) => state.subscribeToDefects)
 
   useEffect(() => {
     fetchDefects()
-  }, [fetchDefects])
+    subscribeToDefects()
+  }, [fetchDefects, subscribeToDefects])
 
   return (
     <div className="app">

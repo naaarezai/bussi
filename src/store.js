@@ -85,6 +85,23 @@ export const useStore = create((set, get) => ({
     }
   },
 
+  subscribeToDefects: () => {
+    supabase.channel('custom-all-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'defects' },
+        (payload) => {
+          // Kun kanta muuttuu, haetaan viat uudelleen tai päivitetään lokaalisti.
+          // Helpoin ja varmin tapa on hakea tuore lista, jos tulee INSERT tai UPDATE.
+          get().fetchDefects();
+          if (payload.eventType === 'INSERT') {
+             get().addToast('Uusi vikailmoitus vastaanotettu!', 'info');
+          }
+        }
+      )
+      .subscribe();
+  },
+
   addDefect: async (defect) => {
     get().addToast('Ladataan raporttia ja kuvaa pilveen...', 'info');
     

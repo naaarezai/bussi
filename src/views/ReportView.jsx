@@ -1,7 +1,7 @@
 import React, { Suspense, useState, useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, ContactShadows, useGLTF, Center, OrbitControls, Html } from '@react-three/drei';
-import { Camera, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { Camera, AlertCircle, RefreshCw, Loader2, Mic } from 'lucide-react';
 import { useStore } from '../store';
 import * as THREE from 'three';
 
@@ -484,6 +484,7 @@ function ReportModal({ part, clickPoint, onClose }) {
     const mediaRecorderRef = useRef(null);
     const [isRecording, setIsRecording] = useState(false);
     const chunksRef = useRef([]);
+    const [isListening, setIsListening] = useState(false);
 
     // Find existing defects for this part (also filter by physical distance if both have coordinates)
     const existingDefects = defects.filter(d => {
@@ -606,13 +607,67 @@ function ReportModal({ part, clickPoint, onClose }) {
     const handleFileSelect = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setMediaPreview(reader.result);
-            setMediaType(file.type.startsWith('video') ? 'video' : 'image');
-            setMode('newReport');
+
+        if (file.type.startsWith('image/')) {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1280;
+                const MAX_HEIGHT = 1280;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                setMediaPreview(dataUrl);
+                setMediaType('image');
+                setMode('newReport');
+            };
+            img.src = URL.createObjectURL(file);
+        } else {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setMediaPreview(reader.result);
+                setMediaType('video');
+                setMode('newReport');
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const startListening = () => {
+        if (!('webkitSpeechRecognition' in window)) {
+            addToast('Selaimesi ei tue puheentunnistusta.', 'warning');
+            return;
+        }
+        const recognition = new window.webkitSpeechRecognition();
+        recognition.lang = 'fi-FI';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => setIsListening(false);
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            setDescription(prev => prev ? prev + ' ' + transcript : transcript);
         };
-        reader.readAsDataURL(file);
+        recognition.start();
     };
 
     // ---- Analyze & Submit ----
@@ -816,19 +871,35 @@ function ReportModal({ part, clickPoint, onClose }) {
                             </div>
                         )}
 
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Kuvaile vika omin sanoin (valinnainen)..."
-                            style={{
-                                width: '100%', minHeight: '80px', background: 'rgba(30, 41, 59, 0.8)',
-                                border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem',
-                                padding: '0.75rem', color: '#f8fafc', fontFamily: 'Inter, sans-serif',
-                                fontSize: '0.875rem', resize: 'vertical', outline: 'none',
-                            }}
-                            onFocus={e => e.target.style.borderColor = 'rgba(56, 189, 248, 0.4)'}
-                            onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Kuvaile vika omin sanoin (valinnainen)..."
+                                style={{
+                                    width: '100%', minHeight: '80px', background: 'rgba(30, 41, 59, 0.8)',
+                                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem',
+                                    padding: '0.75rem', paddingRight: '2.5rem', color: '#f8fafc', fontFamily: 'Inter, sans-serif',
+                                    fontSize: '0.875rem', resize: 'vertical', outline: 'none',
+                                }}
+                                onFocus={e => e.target.style.borderColor = 'rgba(56, 189, 248, 0.4)'}
+                                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                            />
+                            <button 
+                                onClick={startListening}
+                                style={{
+                                    position: 'absolute', top: '0.5rem', right: '0.5rem',
+                                    background: isListening ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)',
+                                    border: isListening ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(255,255,255,0.1)',
+                                    color: isListening ? '#ef4444' : '#94a3b8',
+                                    padding: '0.4rem', borderRadius: '0.5rem', cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                }}
+                                title="Sanele kuvaus"
+                            >
+                                <Mic size={18} />
+                            </button>
+                        </div>
 
                         {/* Severity selector */}
                         <div>

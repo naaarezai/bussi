@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useStore } from '../store';
-import { AlertTriangle, CheckCircle2, AlertCircle, Wrench, Clock, Search, Trash2, Edit3, X, Save, BusFront } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, AlertCircle, Wrench, Clock, Search, Trash2, Edit3, X, Save, BusFront, Loader2 } from 'lucide-react';
 
 export default function DashboardView() {
-    const { defects, updateDefectStatus, removeDefect, filterStatus, setFilterStatus, searchQuery, setSearchQuery, activeVehicle, vehicles, updateDefect } = useStore();
+    const { defects, updateDefectStatus, removeDefect, filterStatus, setFilterStatus, searchQuery, setSearchQuery, activeVehicle, vehicles, updateDefect, isLoadingDefects } = useStore();
     const [vehicleFilter, setVehicleFilter] = useState('all');
     const [editingDefect, setEditingDefect] = useState(null);
     const [editDesc, setEditDesc] = useState('');
@@ -11,7 +11,7 @@ export default function DashboardView() {
 
     // Apply filters with useMemo for performance
     const sortedDefects = useMemo(() => {
-        let filtered = defects;
+        let filtered = defects.filter(d => d.status !== 'resolved');
 
         // Filter by vehicle
         if (vehicleFilter !== 'all') {
@@ -42,8 +42,8 @@ export default function DashboardView() {
 
     const stats = useMemo(() => {
         const source = vehicleFilter !== 'all'
-            ? defects.filter(d => d.vehicle === vehicleFilter)
-            : defects;
+            ? defects.filter(d => d.vehicle === vehicleFilter && d.status !== 'resolved')
+            : defects.filter(d => d.status !== 'resolved');
         return {
             total: source.length,
             red: source.filter(d => d.status === 'red').length,
@@ -192,14 +192,19 @@ export default function DashboardView() {
                 Työjono ({sortedDefects.length} ilmoitusta)
             </h3>
 
-            {sortedDefects.length === 0 ? (
+            {isLoadingDefects ? (
+                <div className="glass-panel" style={{ padding: '3rem', borderRadius: '1rem', textAlign: 'center', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                    <Loader2 size={32} className="spin" style={{ color: '#38bdf8' }} />
+                    Ladataan vikailmoituksia...
+                </div>
+            ) : sortedDefects.length === 0 ? (
                 <div className="glass-panel" style={{ padding: '2rem', borderRadius: '1rem', textAlign: 'center', color: '#64748b' }}>
                     Ei vikailmoituksia tällä suodatuksella.
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {sortedDefects.map((defect) => {
-                        const s = statusLabels[defect.status];
+                        const s = statusLabels[defect.status] || { label: 'Tuntematon', icon: <AlertCircle size={16} />, bg: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8' };
                         const isEditing = editingDefect === defect.id;
 
                         return (
@@ -275,15 +280,22 @@ export default function DashboardView() {
 
                                         {/* Actions */}
                                         <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
-                                            {defect.status !== 'green' && (
+                                            {defect.status === 'red' && (
                                                 <button
-                                                    onClick={() => updateDefectStatus(defect.id, defect.status === 'red' ? 'yellow' : 'green')}
+                                                    onClick={() => updateDefectStatus(defect.id, 'yellow')}
                                                     className="btn btn-primary"
                                                     style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
                                                 >
-                                                    {defect.status === 'red' ? '⚡ Työn alle' : '✅ Valmis'}
+                                                    ⚡ Työn alle
                                                 </button>
                                             )}
+                                            <button
+                                                onClick={() => updateDefectStatus(defect.id, 'resolved')}
+                                                className="btn btn-primary"
+                                                style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', background: 'rgba(34, 197, 94, 0.2)', color: '#22c55e', border: '1px solid #22c55e' }}
+                                            >
+                                                ✅ Arkistoi
+                                            </button>
                                             <button
                                                 onClick={() => startEdit(defect)}
                                                 style={{

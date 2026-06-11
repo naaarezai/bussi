@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, AlertCircle, BusFront, Settings, QrCode } from 'lucide-react';
+import { LayoutDashboard, AlertCircle, BusFront, Settings, QrCode, Archive } from 'lucide-react';
 import { useStore } from '../store';
 
 export default function Sidebar() {
@@ -9,6 +9,7 @@ export default function Sidebar() {
         { id: 'dashboard', icon: <LayoutDashboard size={24} />, label: 'Hallintapaneeli' },
         { id: 'report', icon: <AlertCircle size={24} />, label: 'Vikailmoitus' },
         { id: 'fleet', icon: <BusFront size={24} />, label: 'Kaluston tila' },
+        { id: 'history', icon: <Archive size={24} />, label: 'Huoltohistoria' },
     ];
 
     const handleNav = (id) => {

@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { VEHICLES } from './constants';
 import { supabase } from './supabase';
 
 // Helper function to upload base64 image/video to Supabase Storage
@@ -36,14 +35,123 @@ export const useStore = create((set, get) => ({
   activeView: 'dashboard',
   setActiveView: (view) => set({ activeView: view }),
 
+  // Auth & User Profile
+  user: null,
+  session: null,
+  isInitializingAuth: true,
+
+  initializeAuth: async () => {
+    // Haetaan nykyinen sessio
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      await get().fetchUserProfile(session.user);
+    } else {
+      set({ session: null, user: null, isInitializingAuth: false });
+    }
+
+    // Kuunnellaan muutoksia (login/logout)
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        await get().fetchUserProfile(session.user);
+      } else {
+        set({ session: null, user: null, defects: [] }); // Tyhjennetään tiedot kirjauduttaessa ulos
+      }
+    });
+  },
+
+  fetchUserProfile: async (authUser) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+        
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = No rows found
+
+      set({
+        session: authUser,
+        user: {
+          id: authUser.id,
+          email: authUser.email,
+          role: data?.role || 'driver', // Oletuksena kuljettaja
+          full_name: data?.full_name || authUser.email
+        },
+        isInitializingAuth: false
+      });
+    } catch (error) {
+      console.error('Virhe profiilin latauksessa:', error);
+      set({ isInitializingAuth: false });
+    }
+  },
+
+  signIn: async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  },
+
+  signOut: async () => {
+    await supabase.auth.signOut();
+  },
+
   // Multi-vehicle support
-  vehicles: VEHICLES,
-  activeVehicle: VEHICLES[0],
+  vehicles: [],
+  activeVehicle: null,
+  isLoadingVehicles: false,
+  
+  fetchVehicles: async () => {
+    set({ isLoadingVehicles: true });
+    try {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('*')
+        .order('id');
+      if (error) throw error;
+      set({ vehicles: data || [], activeVehicle: data?.[0] || null, isLoadingVehicles: false });
+    } catch (error) {
+      console.error('Virhe autojen haussa:', error);
+      set({ isLoadingVehicles: false });
+    }
+  },
+
+  addVehicle: async (vehicleData) => {
+    try {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .insert([vehicleData])
+        .select();
+      if (error) throw error;
+      set((state) => ({ vehicles: [...state.vehicles, data[0]] }));
+      get().addToast('Auto lisätty', 'success');
+    } catch (error) {
+      console.error('Virhe auton lisäyksessä:', error);
+      get().addToast('Auton lisäys epäonnistui', 'error');
+    }
+  },
+
+  toggleVehicleStatus: async (id, isActive) => {
+    try {
+      const { error } = await supabase
+        .from('vehicles')
+        .update({ is_active: isActive })
+        .eq('id', id);
+      if (error) throw error;
+      set((state) => ({
+        vehicles: state.vehicles.map(v => v.id === id ? { ...v, is_active: isActive } : v)
+      }));
+      get().addToast(`Auto ${isActive ? 'aktivoitu' : 'piilotettu'}`, 'success');
+    } catch (error) {
+      console.error('Virhe auton tilan vaihdossa:', error);
+      get().addToast('Tilan vaihto epäonnistui', 'error');
+    }
+  },
+
   setActiveVehicle: (vehicleId) => set({
-    activeVehicle: VEHICLES.find(v => v.id === vehicleId) || VEHICLES[0]
+    activeVehicle: get().vehicles.find(v => v.id === vehicleId) || get().vehicles[0]
   }),
   setActiveVehicleByQR: (qrCode) => {
-    const vehicle = VEHICLES.find(v => v.qrCode === qrCode);
+    const vehicle = get().vehicles.find(v => v.qrCode === qrCode);
     if (vehicle) {
       set({ activeVehicle: vehicle, activeView: 'report' });
       return true;
@@ -92,11 +200,20 @@ export const useStore = create((set, get) => ({
         { event: '*', schema: 'public', table: 'defects' },
         (payload) => {
           // Kun kanta muuttuu, haetaan viat uudelleen tai päivitetään lokaalisti.
-          // Helpoin ja varmin tapa on hakea tuore lista, jos tulee INSERT tai UPDATE.
           get().fetchDefects();
           if (payload.eventType === 'INSERT') {
              get().addToast('Uusi vikailmoitus vastaanotettu!', 'info');
           }
+        }
+      )
+      .subscribe();
+
+    supabase.channel('custom-maintenance-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'maintenance_logs' },
+        (payload) => {
+          get().fetchMaintenanceLogs();
         }
       )
       .subscribe();
@@ -207,6 +324,55 @@ export const useStore = create((set, get) => ({
     } catch (error) {
       console.error('Virhe päivityksessä:', error);
       get().addToast('Päivitys epäonnistui.', 'error');
+    }
+  },
+
+  // Maintenance Logs
+  maintenanceLogs: [],
+  isLoadingLogs: false,
+
+  fetchMaintenanceLogs: async () => {
+    set({ isLoadingLogs: true });
+    try {
+      const { data, error } = await supabase
+        .from('maintenance_logs')
+        .select(`
+          id, vehicle, description, date,
+          profiles:mechanic_id(full_name)
+        `)
+        .order('date', { ascending: false });
+        
+      if (error) throw error;
+      set({ maintenanceLogs: data || [], isLoadingLogs: false });
+    } catch (error) {
+      console.error('Virhe huoltohistorian haussa:', error);
+      set({ isLoadingLogs: false });
+    }
+  },
+
+  addMaintenanceLog: async (logData) => {
+    try {
+      const { data, error } = await supabase
+        .from('maintenance_logs')
+        .insert([{
+          vehicle: logData.vehicle,
+          description: logData.description,
+          mechanic_id: get().user?.id
+        }])
+        .select(`
+          id, vehicle, description, date,
+          profiles:mechanic_id(full_name)
+        `);
+        
+      if (error) throw error;
+      
+      set((state) => ({
+        maintenanceLogs: [data[0], ...state.maintenanceLogs]
+      }));
+      get().addToast('Huoltomerkintä tallennettu', 'success');
+    } catch (error) {
+      console.error('Virhe huoltomerkinnän lisäyksessä:', error);
+      get().addToast('Huoltomerkinnän lisäys epäonnistui', 'error');
     }
   },
 

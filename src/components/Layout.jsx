@@ -6,12 +6,13 @@ import ReportView from '../views/ReportView';
 import FleetView from '../views/FleetView';
 import HistoryView from '../views/HistoryView';
 import SettingsView from '../views/SettingsView';
+import UsersView from '../views/UsersView';
 import QRScanner from './QRScanner';
 import ToastContainer from './ToastContainer';
 import { Menu, Download } from 'lucide-react';
 
 export default function Layout() {
-    const { activeView, showQRScanner, isMobileMenuOpen, setMobileMenuOpen, exportDefectsCSV, addToast } = useStore();
+    const { activeView, showQRScanner, isMobileMenuOpen, setMobileMenuOpen, exportDefectsCSV, addToast, user } = useStore();
 
     const views = {
         dashboard: <DashboardView />,
@@ -19,12 +20,18 @@ export default function Layout() {
         fleet: <FleetView />,
         history: <HistoryView />,
         settings: <SettingsView />,
+        users: <UsersView />,
     };
 
     const handleExport = () => {
         exportDefectsCSV();
         addToast('Vikailmoitukset viety CSV-tiedostoon', 'success');
     };
+
+    let currentView = activeView;
+    if (user?.role === 'driver' && !['report', 'settings'].includes(currentView)) {
+        currentView = 'report';
+    }
 
     return (
         <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', position: 'relative' }}>
@@ -53,7 +60,7 @@ export default function Layout() {
                     </button>
                 )}
 
-                {views[activeView] || <DashboardView />}
+                {views[currentView] || <DashboardView />}
             </main>
 
             {/* Mobile overlay */}

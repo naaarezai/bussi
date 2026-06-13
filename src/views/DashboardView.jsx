@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { AlertTriangle, CheckCircle2, AlertCircle, Wrench, Clock, Search, Trash2, Edit3, X, Save, BusFront, Loader2 } from 'lucide-react';
 
 export default function DashboardView() {
-    const { defects, updateDefectStatus, removeDefect, filterStatus, setFilterStatus, searchQuery, setSearchQuery, activeVehicle, vehicles, updateDefect, isLoadingDefects } = useStore();
+    const { defects, updateDefectStatus, removeDefect, filterStatus, setFilterStatus, searchQuery, setSearchQuery, activeVehicle, vehicles, updateDefect, isLoadingDefects, user } = useStore();
     const [vehicleFilter, setVehicleFilter] = useState('all');
     const [editingDefect, setEditingDefect] = useState(null);
     const [editDesc, setEditDesc] = useState('');
@@ -306,16 +306,18 @@ export default function DashboardView() {
                                             >
                                                 <Edit3 size={16} />
                                             </button>
-                                            <button
-                                                onClick={() => removeDefect(defect.id)}
-                                                style={{
-                                                    background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)',
-                                                    color: '#ef4444', padding: '0.4rem', borderRadius: '0.5rem',
-                                                    cursor: 'pointer', transition: 'all 0.2s', display: 'flex',
-                                                }}
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+                                            {(user?.role === 'admin' || user?.role === 'mechanic') && (
+                                                <button
+                                                    onClick={() => removeDefect(defect.id)}
+                                                    style={{
+                                                        background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)',
+                                                        color: '#ef4444', padding: '0.4rem', borderRadius: '0.5rem',
+                                                        cursor: 'pointer', transition: 'all 0.2s', display: 'flex',
+                                                    }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 )}

@@ -5,8 +5,6 @@ import { Camera, AlertCircle, RefreshCw, Loader2, Mic } from 'lucide-react';
 import { useStore } from '../store';
 import * as THREE from 'three';
 
-import { VEHICLES } from '../constants'; // Added to lookup modelFile
-
 // Part name mapping for the default bus model
 const PART_NAMES_BUS = {
     // Body / Runko
@@ -404,7 +402,7 @@ function DefectMarkers({ modelFile }) {
 
     return (
         <>
-            {defects.filter(d => d.vehicle === activeVehicle.id).map((d, index) => {
+            {defects.filter(d => d.vehicle === activeVehicle?.id).map((d, index) => {
                 // Use exact click coordinates if available, otherwise fallback to mesh center
                 const position = d.coordinates || getPosition(d.part);
                 if (!position) return null;
@@ -470,7 +468,10 @@ function generateDefectPhoto(partName, severity) {
 
 // Report Modal Component — shows existing defects AND allows new reports
 function ReportModal({ part, clickPoint, onClose }) {
-    const { addDefect, defects, activeVehicle, addToast } = useStore();
+    const {
+        activeVehicle, setActiveVehicle, setActiveVehicleByQR,
+        addDefect, defects, addToast, user, vehicles
+    } = useStore();
     const [mode, setMode] = useState('overview'); // overview, newReport, camera, analyzing, result
     const [result, setResult] = useState(null);
     const [description, setDescription] = useState('');
@@ -488,7 +489,7 @@ function ReportModal({ part, clickPoint, onClose }) {
 
     // Find existing defects for this part (also filter by physical distance if both have coordinates)
     const existingDefects = defects.filter(d => {
-        if (d.vehicle !== activeVehicle.id) return false;
+        if (d.vehicle !== activeVehicle?.id) return false;
 
         const nameMatch = d.part === part || (d.part && d.part.includes(part)) || (d.part && part.includes(d.part));
         if (!nameMatch) return false;
@@ -732,7 +733,7 @@ function ReportModal({ part, clickPoint, onClose }) {
                                     {existingDefects.map(defect => {
                                         const sev = severityLabels[defect.status];
                                         // To get the correct global index, filter by vehicle first to match what DefectMarkers does
-                                        const vehicleDefects = defects.filter(d => d.vehicle === activeVehicle.id);
+                                        const vehicleDefects = defects.filter(d => d.vehicle === activeVehicle?.id);
                                         const globalIndex = vehicleDefects.findIndex(d => d.id === defect.id) + 1;
                                         return (
                                             <div key={defect.id} className="glass-panel" style={{
@@ -1072,11 +1073,11 @@ function ReportModal({ part, clickPoint, onClose }) {
 }
 
 export default function ReportView() {
-    const { activePart, setActivePart, activeVehicle } = useStore();
+    const { activePart, setActivePart, activeVehicle, vehicles } = useStore();
     const [clickPoint, setClickPoint] = useState(null);
 
-    // Resolve the modelFile for the current vehicle from VEHICLES constant, or fallback
-    const vehicleDef = VEHICLES.find(v => v.id === activeVehicle?.id);
+    // Resolve the modelFile for the current vehicle from vehicles array, or fallback
+    const vehicleDef = vehicles.find(v => v.id === activeVehicle?.id);
     const modelFile = vehicleDef?.modelFile || '/bus.glb';
 
     return (

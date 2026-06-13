@@ -1,16 +1,28 @@
 import React from 'react';
-import { LayoutDashboard, AlertCircle, BusFront, Settings, QrCode, Archive } from 'lucide-react';
+import { LayoutDashboard, AlertCircle, BusFront, Settings, QrCode, Archive, Users, LogOut } from 'lucide-react';
 import { useStore } from '../store';
 
 export default function Sidebar() {
-    const { activeView, setActiveView, activeVehicle, setShowQRScanner, isMobileMenuOpen, setMobileMenuOpen } = useStore();
+    const { activeView, setActiveView, activeVehicle, setShowQRScanner, isMobileMenuOpen, setMobileMenuOpen, user, signOut } = useStore();
 
-    const navItems = [
-        { id: 'dashboard', icon: <LayoutDashboard size={24} />, label: 'Hallintapaneeli' },
-        { id: 'report', icon: <AlertCircle size={24} />, label: 'Vikailmoitus' },
-        { id: 'fleet', icon: <BusFront size={24} />, label: 'Kaluston tila' },
-        { id: 'history', icon: <Archive size={24} />, label: 'Huoltohistoria' },
-    ];
+    let navItems = [];
+    
+    if (user?.role === 'driver') {
+        navItems = [
+            { id: 'report', icon: <AlertCircle size={24} />, label: 'Vikailmoitus' },
+        ];
+    } else {
+        navItems = [
+            { id: 'dashboard', icon: <LayoutDashboard size={24} />, label: 'Hallintapaneeli' },
+            { id: 'report', icon: <AlertCircle size={24} />, label: 'Vikailmoitus' },
+            { id: 'fleet', icon: <BusFront size={24} />, label: 'Kaluston tila' },
+            { id: 'history', icon: <Archive size={24} />, label: 'Huoltohistoria' },
+        ];
+        
+        if (user?.role === 'admin') {
+            navItems.push({ id: 'users', icon: <Users size={24} />, label: 'Käyttäjät' });
+        }
+    }
 
     const handleNav = (id) => {
         setActiveView(id);
@@ -30,21 +42,23 @@ export default function Sidebar() {
             </div>
 
             {/* Active vehicle badge */}
-            <div style={{
-                margin: '0 0.5rem 1rem', padding: '0.6rem 0.75rem', borderRadius: '0.75rem',
-                background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)',
-                cursor: 'pointer', transition: 'all 0.2s',
-            }}
-                onClick={() => setShowQRScanner(true)}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <QrCode size={16} style={{ color: '#38bdf8' }} />
-                    <div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#38bdf8' }}>{activeVehicle.id}</div>
-                        <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{activeVehicle.model}</div>
+            {activeVehicle && (
+                <div style={{
+                    margin: '0 0.5rem 1rem', padding: '0.6rem 0.75rem', borderRadius: '0.75rem',
+                    background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)',
+                    cursor: 'pointer', transition: 'all 0.2s',
+                }}
+                    onClick={() => setShowQRScanner(true)}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <QrCode size={16} style={{ color: '#38bdf8' }} />
+                        <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#38bdf8' }}>{activeVehicle.id}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{activeVehicle.model}</div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {navItems.map(item => (
@@ -75,7 +89,7 @@ export default function Sidebar() {
                 ))}
             </nav>
 
-            <div style={{ marginTop: 'auto' }}>
+            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <button
                     onClick={() => handleNav('settings')}
                     style={{
@@ -96,6 +110,27 @@ export default function Sidebar() {
                     }}>
                     <Settings size={20} />
                     Asetukset
+                </button>
+                <button
+                    onClick={() => signOut()}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#ef4444',
+                        padding: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        cursor: 'pointer',
+                        width: '100%',
+                        textAlign: 'left',
+                        fontFamily: 'inherit',
+                        transition: 'background 0.2s',
+                        borderRadius: '0.75rem',
+                        fontWeight: '400',
+                    }}>
+                    <LogOut size={20} />
+                    Kirjaudu ulos
                 </button>
             </div>
         </div>
